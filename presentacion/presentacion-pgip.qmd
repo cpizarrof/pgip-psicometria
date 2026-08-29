@@ -1,0 +1,1179 @@
+---
+title: "Percepción de la Gestión Institucional Preventiva"
+subtitle: "Propiedades psicométricas y distribución del constructo PGIP en apoderados de establecimientos educacionales chilenos"
+author: "Bianca Bruna · Cristian Olate · Carlos Pizarro"
+date: "2026-07-21"
+lang: es
+format:
+  revealjs:
+    theme: [default, tema-pgip.scss]
+    width: 1280
+    height: 720
+    margin: 0.08
+    center: false
+    slide-number: c/t
+    progress: true
+    history: true
+    transition: fade
+    background-transition: fade
+    controls: true
+    hash: true
+    embed-resources: true
+    fig-align: center
+    include-in-header:
+      - text: |
+          <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+execute:
+  echo: false
+  warning: false
+  message: false
+  cache: true
+knitr:
+  opts_chunk:
+    dev: "ragg_png"
+    dpi: 300
+    fig.retina: 2
+---
+
+```{r setup}
+#| include: false
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(psych)
+library(lavaan)
+library(gt)
+library(showtext)
+library(ragg)
+
+# Registrar Montserrat para que los GRÁFICOS (no solo el HTML) usen la misma
+# familia tipográfica que el resto del deck.
+sysfonts::font_add_google("Montserrat", "Montserrat")
+showtext_auto()
+showtext_opts(dpi = 300)
+
+# ---- Paleta PGIP (debe coincidir con tema-pgip.scss) ----
+azul_institucional <- "#0B4C82"
+azul_profundo      <- "#052C4D"
+azul_tinta         <- "#E7EEF5"
+hueso              <- "#FAF7F1"
+panel_bg           <- "#FFFFFF"
+tinta              <- "#1C2733"
+pizarra            <- "#5C6B78"
+linea              <- "#DDD7C9"
+oro                <- "#A9782E"
+
+# ---- Tema ggplot reutilizable: usar en TODOS los gráficos del deck ----
+tema_pgip <- function(base_size = 16, angulo_x = 0) {
+  theme_minimal(base_size = base_size, base_family = "Montserrat") +
+    theme(
+      plot.background    = element_rect(fill = hueso, color = NA),
+      panel.background   = element_rect(fill = hueso, color = NA),
+      panel.grid.minor   = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.major.y = element_line(color = linea, linewidth = 0.35),
+      axis.line.x  = element_line(color = pizarra, linewidth = 0.4),
+      axis.ticks   = element_blank(),
+      axis.text    = element_text(color = pizarra, size = rel(0.85)),
+      axis.text.x  = element_text(angle = angulo_x, hjust = if (angulo_x > 0) 1 else 0.5),
+      axis.title   = element_text(color = tinta),
+      strip.background = element_blank(),
+      strip.text   = element_text(color = azul_institucional, face = "bold", size = rel(1), hjust = 0),
+      legend.position = "bottom",
+      legend.title = element_blank(),
+      legend.text  = element_text(color = tinta),
+      plot.margin  = margin(10, 16, 10, 6)
+    )
+}
+
+# ---- Tema gt reutilizable: usar en TODAS las tablas del deck ----
+tabla_pgip <- function(datos, ..., size = 16, padding = 7, label_size = NULL) {
+  # `size`    = tamaño de fuente del cuerpo de la tabla (px)
+  # `padding` = alto interno de cada fila (px)
+  # Las etiquetas de columna escalan solas con el cuerpo, con un piso de 12px
+  # para que nunca queden ilegibles en las tablas más densas.
+  if (is.null(label_size)) label_size <- max(12, round(size * 0.72))
+  gt(datos, ...) |>
+    # Montserrat ya está cargada UNA sola vez a nivel de página (ver el <link>
+    # de Google Fonts en el header). Usar google_font() aquí hacía que CADA
+    # tabla incrustara su propia copia completa de la familia tipográfica en
+    # base64 — con 11 tablas en el deck, eso multiplicaba varios MB de más y
+    # es la causa más probable de que alguna tabla fallara al renderizar.
+    opt_table_font(font = list("Montserrat", default_fonts())) |>
+    tab_options(
+      table.background.color            = panel_bg,
+      table.font.color                  = tinta,
+      table.font.size                   = px(size),
+      table.border.top.color            = azul_institucional,
+      table.border.top.width            = px(2),
+      table.border.bottom.color         = azul_institucional,
+      table.border.bottom.width         = px(2),
+      column_labels.background.color    = panel_bg,
+      column_labels.font.weight         = "700",
+      column_labels.text_transform      = "uppercase",
+      column_labels.font.size           = px(label_size),
+      column_labels.border.bottom.color = azul_institucional,
+      column_labels.border.bottom.width = px(1.5),
+      table_body.hlines.color           = linea,
+      table_body.hlines.width           = px(1),
+      table_body.border.bottom.color    = linea,
+      row_group.background.color        = azul_tinta,
+      row_group.font.weight             = "700",
+      data_row.padding                  = px(padding),
+      heading.align                     = "left"
+    ) |>
+    tab_style(style = cell_text(color = azul_institucional), locations = cells_column_labels()) |>
+    tab_style(style = cell_text(color = azul_profundo, weight = "700"), locations = cells_row_groups())
+}
+```
+
+```{r base-de-datos}
+#| cache: true
+bd_apoderados <- read_excel("DATOS.xlsx")
+bd_ace        <- read_excel("simce2m2024_rbd_preliminar.xlsx")
+bd_mineduc    <- read_excel("20240912_Directorio_Oficial_EE_2024_20240430_WEB.xlsx")
+```
+
+## {.smaller background-color="#FAF7F1"}
+
+::: {.hook-slide style="height:auto;"}
+<span class="tag-instrumento tag-tct">El problema</span>
+
+<p class="hook-line-sm">Los colegios <em>actúan</em>. Las familias no siempre lo <em>perciben</em>.</p>
+:::
+
+::: {.fragment .fade-up}
+La violencia escolar no se combate únicamente reaccionando a incidentes, sino gestionando un **clima escolar preventivo**: cuando la familia no percibe ni se involucra en las acciones del colegio, la eficacia de estas se reduce y los esfuerzos dejan de ser consistentes. Medir esta
+**percepción** es clave para la alianza “escuela-familia”, además de identificar si los
+esfuerzos de los colegios son consistentes o equitativos a través de diversos
+contextos del país.
+:::
+
+::: {.fragment .fade-up}
+<div class="stat-hero" style="margin-top:0.3em;">
+  <span class="valor">N = 178.266</span>
+  <span class="etiqueta">padres, madres y apoderados evaluados en el proceso Simce 2024</span>
+</div>
+:::
+
+<span class="ghost-number">178.266</span>
+
+## Objetivo general y específicos {.smaller}
+
+::: {.panel-invertido}
+**Analizar las propiedades psicométricas y la distribución de la Percepción de la Gestión Institucional Preventiva (PGIP)** en padres y apoderados de establecimientos educacionales chilenos.
+:::
+
+::: {.roadmap-item .fragment .fade-up}
+<span class="num">01</span> Validar estructura interna y consistencia del constructo.
+<span class="destino">→ TCT · AFC</span>
+:::
+::: {.roadmap-item .fragment .fade-up}
+<span class="num">02</span> Caracterizar la percepción según variables de contexto.
+<span class="destino">→ Control sociodemográfico</span>
+:::
+::: {.roadmap-item .fragment .fade-up}
+<span class="num">03</span> Identificar sesgos y comportamientos de los ítems.
+<span class="destino">→ Análisis de ítems</span>
+:::
+::: {.roadmap-item .fragment .fade-up}
+<span class="num">04</span> Generar una métrica de puntuación escalar para el PGIP.
+<span class="destino">→ Puntuación 0–100</span>
+:::
+
+## <span class="section-kicker">01 · Fundamentos · Antecedentes y Marco Teórico</span>Génesis teórica
+
+:::: {.theory-card-grid}
+::: {.theory-card .fragment}
+<span class="concepto">Teoría Ecológica (Mesosistema)</span>
+<span class="autor">Bronfenbrenner, 1986</span>
+La interacción familia-escuela es la base para medir la salud de la alianza institucional.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Percepción Parental de Seguridad</span>
+<span class="autor">Astor y Benbenishty, 2019</span>
+Actúa como mediador clave entre los eventos reales de violencia y el involucramiento familiar.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Gestión Institucional Preventiva</span>
+<span class="autor">Carbajal, 2013 · Garcés, 2020</span>
+Transición del "control de conductas agresivas" hacia un modelo sistemático y proactivo que procura el bienestar de la comunidad.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Justicia Procedimental</span>
+<span class="autor">Tyler, 2006</span>
+La confianza parental depende de procedimientos justos, consistentes y comunicados con transparencia.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Clima Nutritivo vs. Tóxico</span>
+<span class="autor">Arón y Milicic, 2017</span>
+Los climas nutritivos fomentan la resolución de conflictos; la invisibilización parental genera climas tóxicos.
+:::
+::::
+
+## El modelo de esferas superpuestas
+
+::: {.fragment .fade-up}
+**Epstein et al. (2009)** postula una responsabilidad mutua entre escuelas, familias y comunidades, operacionalizada en 6 tipos de involucramiento — base de la mayoría de los ítems de percepción parental en sistemas de gran escala.
+:::
+
+:::: {.theory-card-grid}
+::: {.theory-card .fragment}
+<span class="concepto">1. Crianza</span>
+Apoyo a las familias para establecer entornos domésticos que fomenten el aprendizaje.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">2. Comunicación</span>
+Diseño de canales efectivos y bidireccionales sobre programas y el progreso del estudiante.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">3. Voluntariado</span>
+Organización de los padres para apoyar las actividades y funciones del establecimiento.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">4. Aprendizaje en casa</span>
+Orientaciones para que los padres ayuden con tareas y decisiones curriculares.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">5. Toma de decisiones</span>
+Inclusión de los padres en el gobierno escolar y en el desarrollo de líderes parentales.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">6. Colaboración comunitaria</span>
+Integración de recursos de la comunidad para fortalecer los programas de los estudiantes.
+:::
+::::
+
+::: {.fragment .fade-up}
+> La convivencia enseña, no es materia de decisión. La escuela propone y enseña a los alumnos y alumnas una manera de relacionarse.
+> — Fernando Onetto (2002)
+:::
+
+## Antecedentes teóricos
+
+:::: {.theory-card-grid}
+::: {.theory-card .fragment}
+<span class="concepto">Perfil del apoderado</span>
+**"Voces de los apoderados" (2018)** indica que no hay diferencias significativas en la percepción de seguridad entre padres biológicos y otros cuidadores — la visión de la gestión es una propiedad compartida del hogar.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Brechas por GSE</span>
+Apoderados de GSE alto ejercen mayor escrutinio crítico (crianza concertada); el GSE bajo tiende a delegar la autoridad en la escuela <br><span class="autor" style="display:inline;">(Cheung y Pomerantz, 2012 · Lareau, 2003)</span>.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Gradiente de valoración del clima</span>
+Los establecimientos particulares pagados presentan mejores valoraciones, seguidos por subvencionados y municipales <br><span class="autor" style="display:inline;">(Padilla y Rodríguez, 2019)</span>.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Brechas por zona geográfica</span>
+Los apoderados rurales reportan mayor aprobación de la representatividad de sus organizaciones (82%) que los urbanos (74%) <br><span class="autor" style="display:inline;">(ACE, 2018)</span>.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Religión</span>
+Mayor confianza en la gestión de colegios religiosos y percepción de un control social más efectivo sobre la violencia <br><span class="autor" style="display:inline;">(Coleman, 1987 · Xu & Spruyt, 2022)</span>.
+:::
+::: {.theory-card .fragment}
+<span class="concepto">Isomorfismo institucional</span>
+La fuerte regulación estatal empuja a todos los colegios a estandarizar sus procedimientos preventivos <br><span class="autor" style="display:inline;">(DiMaggio y Powell, 1983 · López et al., 2018)</span>.
+:::
+::::
+
+::: {.fragment .fade-up}
+El presente estudio explora si estas brechas globales persisten en la realidad nacional, bajo un marco normativo altamente estandarizado (Ley de Violencia Escolar, normativas de la Superintendencia).
+:::
+
+## Definición del constructo e hipótesis {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+<span class="tag-instrumento tag-metodo">Definición constitutiva</span>
+
+La PGIP es la variable latente que representa la valoración subjetiva del apoderado sobre la capacidad proactiva, normativa y operativa del establecimiento para salvaguardar la integridad de los estudiantes y fomentar un clima de sana convivencia.
+
+*No es una medida de "ausencia de violencia", sino de "presencia de gestión" (ACE, 2024).*
+:::
+::: {.column width="50%"}
+<span class="tag-instrumento tag-tct">Definición operacional</span>
+
+Se operacionaliza mediante una **escala de 6 indicadores** de frecuencia (Likert 1 a 4), donde un mayor puntaje indica una percepción más favorable de la gestión. Siguiendo a **Crocker y Algina (2008)**.
+:::
+::::
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.theory-card .fragment .fade-up style="border-left-color:#0B4C82;"}
+<span class="concepto">Hipótesis psicométrica</span>
+Los 6 ítems convergen en un único factor latente (PGIP), con validez estructural (AFC) y adecuada consistencia interna.
+:::
+:::
+::: {.column width="50%"}
+::: {.theory-card .fragment .fade-up style="border-left-color:#A9782E;"}
+<span class="concepto" style="color:#8A5F1E;">Hipótesis descriptiva de brechas</span>
+Existen diferencias significativas en el nivel medio del PGIP según GSE, dependencia administrativa, ruralidad y orientación religiosa.
+:::
+:::
+::::
+
+## <span class="section-kicker">02 · Método · Población, muestra y análisis de ítems</span>Población estudiada
+
+Padres, madres y apoderados de estudiantes de **II Medio** en Chile, evaluados en el proceso Simce 2024.
+
+::: {.fragment .fade-up}
+Se ensambló (*merge*) usando el Rol Base de Datos (`rbd`) como llave primaria, uniendo tres fuentes:
+
+1. **Cuestionario Apoderados** — ítems del constructo PGIP (`capod_p11_01` a `06`).
+2. **Agencia de Calidad (ACE)** — GSE, Dependencia Administrativa, Ruralidad.
+3. **Directorio Oficial Mineduc** — orientación religiosa del establecimiento.
+:::
+
+::: {.fragment .fade-up}
+<div class="stat-hero">
+  <span class="valor">171.797</span>
+  <span class="etiqueta">casos válidos tras eliminar respuestas inválidas (99 o 0) — 3,63% del total</span>
+</div>
+:::
+
+```{r limpieza}
+items_pgip <- c("capod_p11_01", "capod_p11_02", "capod_p11_03",
+                "capod_p11_04", "capod_p11_05", "capod_p11_06")
+df_limpio <- bd_apoderados |>
+  mutate(across(all_of(items_pgip), ~ifelse(.x %in% c(0, 99), NA, .x))) |>
+  filter(complete.cases(pick(all_of(items_pgip))))
+```
+
+```{r join-de-bases}
+ace_reducida <- bd_ace |> select(rbd, cod_grupo, cod_depe2, cod_rural_rbd)
+mineduc_reducida <- bd_mineduc |> rename_with(tolower) |> select(rbd, ori_religiosa)
+
+df_final <- df_limpio |>
+  left_join(ace_reducida, by = "rbd") |>
+  left_join(mineduc_reducida, by = "rbd")
+```
+
+```{r variables-categoricas}
+df_final <- df_final |>
+  mutate(
+    Parentesco = case_when(
+      capod_p01 == 1 ~ "Madre", capod_p01 == 2 ~ "Padre",
+      capod_p01 %in% c(3,4,5,6,7,8) ~ "Otro familiar/Cuidador",
+      TRUE ~ "Sin información"),
+    GSE = case_when(
+      cod_grupo == 1 ~ "Bajo", cod_grupo == 2 ~ "Medio Bajo", cod_grupo == 3 ~ "Medio",
+      cod_grupo == 4 ~ "Medio Alto", cod_grupo == 5 ~ "Alto", TRUE ~ "Sin información"),
+    DA = case_when(
+      cod_depe2 == 1 ~ "Municipal", cod_depe2 == 2 ~ "Particular subvencionado",
+      cod_depe2 == 3 ~ "Particular pagado", cod_depe2 == 4 ~ "SLE", TRUE ~ "Sin información"),
+    Ruralidad = case_when(
+      cod_rural_rbd == 1 ~ "Urbano", cod_rural_rbd == 2 ~ "Rural", TRUE ~ "Sin información"),
+    Orientacion = case_when(
+      ori_religiosa == 1 ~ "Laico", ori_religiosa %in% 2:7 ~ "Confesional/Religioso",
+      TRUE ~ "Sin información")
+  )
+```
+
+## Tabla 1 · Caracterización de la muestra {.smaller}
+
+<span class="tag-instrumento tag-metodo">Método · Muestra</span>
+
+```{r tabla-resumen}
+resumen_muestra <- df_final |>
+  select(DA, GSE, Orientacion, Parentesco, Ruralidad) |>
+  gather(Variable, Categoria) |>
+  count(Variable, Categoria) |>
+  group_by(Variable) |>
+  mutate(Porcentaje = round((n / sum(n)) * 100, 1)) |>
+  ungroup() |>
+  arrange(Variable, desc(n))
+
+resumen_izq <- resumen_muestra |> filter(Variable %in% c("GSE", "DA"))
+resumen_der <- resumen_muestra |> filter(Variable %in% c("Ruralidad", "Orientacion", "Parentesco"))
+```
+
+:::: {.columns}
+::: {.column width="48%"}
+```{r tabla-resumen-izq}
+resumen_izq |>
+  tabla_pgip(groupname_col = "Variable", size = 21, padding = 7) |>
+  cols_label(Categoria = "Categoría", n = "N", Porcentaje = "%") |>
+  cols_align(align = "center", columns = c(n, Porcentaje)) |>
+  fmt_number(columns = Porcentaje, decimals = 1)
+```
+:::
+::: {.column width="48%"}
+```{r tabla-resumen-der}
+resumen_der |>
+  tabla_pgip(groupname_col = "Variable", size = 21, padding = 7) |>
+  cols_label(Categoria = "Categoría", n = "N", Porcentaje = "%") |>
+  cols_align(align = "center", columns = c(n, Porcentaje)) |>
+  fmt_number(columns = Porcentaje, decimals = 1)
+```
+:::
+::::
+
+## Cuadro 1 · Mapeo de ítems {.smaller}
+
+<span class="tag-instrumento tag-metodo">Método · Instrumento</span>
+
+**¿Con qué frecuencia ocurre lo siguiente en este colegio?**
+
+```{r mapeo-items}
+mapeo_data <- data.frame(
+  Variable = paste0("p11_0", 1:6),
+  Texto_Item = c(
+    "Se organizan actividades de prevención de la violencia (escuelas para apoderados, charlas, talleres, campañas, etc.).",
+    "Se comunican de forma clara los procedimientos para enfrentar situaciones de violencia escolar.",
+    "Se realizan actividades para el crecimiento personal y social de los(as) estudiantes.",
+    "Se solicita la participación de las familias para prevenir la violencia escolar.",
+    "Los adultos toman acciones para que mi hijo(a) se sienta seguro(a).",
+    "Le enseñan a mi hijo(a) valores como el respeto y la sana convivencia."
+  ),
+  Faceta = c("Proactiva", "Procedimental", "Formativa", "Colaborativa", "Seguridad Física", "Normativo-Ética"),
+  Autor = c("Carbajal 2013 · Garcés 2020", "Tyler 2006", "Arón y Milicic 2017",
+            "Epstein 2009", "Astor y Benbenishty 2019", "Onetto 2002")
+)
+
+mapeo_data |>
+  tabla_pgip() |>
+  cols_label(Variable = "Cód.", Texto_Item = "Afirmación del ítem", Faceta = "Faceta", Autor = "Sustento teórico") |>
+  tab_style(style = cell_text(weight = "700", color = azul_institucional), locations = cells_body(columns = Variable))
+```
+
+## Posibles sesgos · Dimensión de respuesta
+
+Los ítems evalúan percepciones subjetivas mediante escala Likert, susceptible a patrones de respuesta (Crocker y Algina, 2008):
+
+::: {.incremental}
+1. **Deseabilidad Social Institucional** — sobre-reportar acciones positivas (especialmente en GSE altos).
+2. **Sesgo de Referencia** — evaluación contra estándares propios del apoderado, no un criterio absoluto.
+3. **Sesgo de Aquiescencia** — tendencia automática a estar de acuerdo.
+4. **Efecto Halo** — contaminación por un atributo global del establecimiento <br>(ej. prestigio).
+5. **Sesgo de Tendencia Central** — evitación de categorías extremas, reduciendo la varianza.
+6. **Sesgo por Método Común** — todas las respuestas comparten apoderado, momento y formato (Podsakoff et al., 2003).
+:::
+
+## Posibles sesgos · Información, muestreo y procesamiento
+
+Más allá de la respuesta, influyen la **posición del apoderado** en el ecosistema escolar y la **captura de datos** de la ACE:
+
+::: {.incremental}
+7. **Observación Indirecta** — los padres no son testigos directos; dependen del relato del hijo(a) o la comunicación formal del colegio.
+8. **Autoselección (no respuesta)** — apoderados de menor involucramiento o GSE bajo podrían omitir más preguntas complejas (p11_02).
+9. **Funcionamiento Diferencial del Ítem (DIF)** — "talleres" o "protocolos" pueden interpretarse distinto según capital cultural.
+10. **Errores de Captura Digital** — procesos de ICR/OMR pueden derivar en multimarca o respuestas fuera de rango.
+11. **Efecto de Techo/Piso** — ítems "muy fáciles" (unanimidad) impiden observar brechas reales entre contextos.
+:::
+
+## Cuadro 2 · Descriptivos y omisiones {.smaller}
+
+<span class="tag-instrumento tag-tct">TCT · Análisis de ítems</span>
+
+```{r descriptivos-items}
+df_omisiones <- bd_apoderados |> mutate(across(all_of(items_pgip), ~ifelse(.x %in% c(0, 99), NA, .x)))
+n_total <- nrow(df_omisiones)
+omisiones_n <- sapply(df_omisiones[items_pgip], function(x) sum(is.na(x)))
+omisiones_pct <- round((omisiones_n / n_total) * 100, 1)
+
+matriz_items <- df_limpio |> select(all_of(items_pgip))
+desc_items <- describe(matriz_items)
+
+tabla_descriptiva <- data.frame(
+  Item = c("01 · Proactiva", "02 · Procedimental", "03 · Formativa",
+           "04 · Colaborativa", "05 · Seguridad Física", "06 · Normativo-Ética"),
+  Omitidos = paste0(omisiones_n, " (", omisiones_pct, "%)"),
+  Media = round(desc_items$mean, 2),
+  DS = round(desc_items$sd, 2),
+  Asimetria = round(desc_items$skew, 2)
+)
+
+tabla_descriptiva_gt <- tabla_descriptiva |>
+  tabla_pgip(size = 20, padding = 6) |>
+  cols_label(Item = "Ítem", Omitidos = "Omitidos N (%)", Media = "Media", DS = "DE", Asimetria = "Asimetría") |>
+  cols_align(align = "center", columns = c(Media, DS, Asimetria)) |>
+  data_color(columns = Asimetria, palette = c(azul_institucional, azul_tinta, oro), domain = c(-1, 0, 1))
+```
+
+:::: {.columns}
+::: {.column width="32%"}
+Desde la TCT un ítem es "bueno" si tiene **varianza**; en escalas Likert la **media** opera como Índice de Dificultad.
+
+La **asimetría** es el tercer momento estandarizado de la distribución de respuestas:
+
+$$g_1 = \frac{m_3}{s^{3}}$$
+
+donde $m_3 = \tfrac{1}{n}\sum_{i=1}^{n}(X_i-\bar{X})^3$ es el tercer momento central y $s$ la desviación estándar muestral.
+
+:::
+::: {.column width="66%"}
+```{r imprimir-descriptivos}
+tabla_descriptiva_gt
+```
+
+::: {.fragment .fade-up}
+Los seis ítems presentan **asimetría negativa**: la masa de respuestas se concentra en las categorías altas de la escala. Es la primera señal empírica del **efecto de techo** anticipado entre los sesgos, y la razón por la que el AFC se estimará con un método robusto ante la no normalidad.
+<br>Rango aceptable: $-1{,}0$ a $1{,}0$ (Hair et al., 2019) 
+<br>Tolerable hasta $\pm 2{,}0$ (George y Mallery, 2010)
+:::
+:::
+::::
+
+## Visualización de asimetría {.smaller}
+
+<span class="tag-instrumento tag-tct">TCT · Distribución de respuestas</span>
+
+::: {.figura-xl}
+```{r visualizacion-desc}
+#| fig.width: 11
+#| fig.height: 5.2
+df_plot <- matriz_items |>
+  pivot_longer(cols = everything(), names_to = "Item", values_to = "Respuesta") |>
+  mutate(
+    Respuesta = factor(Respuesta, levels = 1:4,
+                        labels = c("Nunca", "Pocas veces", "Varias veces", "La mayoría de las veces")),
+    Item = case_when(
+      Item == "capod_p11_01" ~ "01 · Proactiva", Item == "capod_p11_02" ~ "02 · Procedimental",
+      Item == "capod_p11_03" ~ "03 · Formativa", Item == "capod_p11_04" ~ "04 · Colaborativa",
+      Item == "capod_p11_05" ~ "05 · Seguridad Física", Item == "capod_p11_06" ~ "06 · Normativo-Ética")
+  ) |>
+  count(Item, Respuesta) |>
+  group_by(Item) |>
+  mutate(Porcentaje = n / sum(n)) |>
+  ungroup()
+
+ggplot(df_plot, aes(x = fct_rev(Item), y = Porcentaje, fill = Respuesta)) +
+  geom_col(position = position_stack(reverse = TRUE), color = hueso, linewidth = 0.4, width = 0.65) +
+  coord_flip() +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), breaks = seq(0, 1, by = 0.25)) +
+  scale_fill_manual(values = c("Nunca" = "#8B5E2A", "Pocas veces" = "#C9A46B",
+                                "Varias veces" = "#8FB0CC", "La mayoría de las veces" = azul_institucional)) +
+  labs(y = "% de apoderados", x = NULL, fill = NULL) +
+  tema_pgip(base_size = 16) +
+  theme(axis.text.y = element_text(face = "bold", color = tinta))
+```
+:::
+
+## <span class="section-kicker">03 · Teoría Clásica de los Tests · Confiabilidad del instrumento</span>Análisis de consistencia interna
+
+Se calculó el coeficiente **Alfa de Cronbach** ($\alpha$) con el paquete `psych`, junto a las correlaciones ítem-total corregidas y el alfa si se elimina cada ítem. Se considera óptimo un $\alpha > 0.7$.
+
+::: {.fragment .fade-up}
+* Se usan solo casos completos: con omisiones, las covarianzas *pairwise* generan matrices no comparables entre confiabilidad y AFC.
+* Con pérdida <10% y mecanismo aleatorio (MCAR), los casos completos son robustos (Little y Rubin, 2002).
+* En $N > 170.000$, la pérdida de potencia al eliminar 3,63% es insignificante frente a la ganancia en precisión (Cohen, West y Aiken, 2003).
+:::
+
+## Tabla 2 · Confiabilidad y discriminación {.smaller}
+
+<span class="tag-instrumento tag-tct">TCT · Confiabilidad</span>
+
+```{r confiabilidad}
+matriz_pgip <- df_limpio |> select(all_of(items_pgip))
+analisis_alfa <- alpha(matriz_pgip)
+alfa_general <- round(analisis_alfa$total$raw_alpha, 3)
+
+tabla_alfa_drop <- data.frame(
+  Item = c("01 · Proactiva", "02 · Procedimental", "03 · Formativa",
+           "04 · Colaborativa", "05 · Seguridad Física", "06 · Normativo-Ética"),
+  Correlacion_Item_Total = round(analisis_alfa$item.stats$r.drop, 2),
+  Alfa_sin_item = round(analisis_alfa$alpha.drop$raw_alpha, 3)
+)
+```
+
+:::: {.columns}
+::: {.column width="35%"}
+<div class="stat-hero" style="flex-direction:column; align-items:flex-start; gap:0;">
+  <span class="valor">α ≈ `r alfa_general`</span>
+  <br><span class="etiqueta">consistencia interna global — supera ampliamente el umbral de 0,70</span>
+</div>
+
+**Discriminación:** un ítem discrimina si distingue a quienes puntúan alto de quienes puntúan bajo en el test. El índice es la correlación entre el ítem y el puntaje total, $r_{i(t-i)}$, calculada **excluyendo el propio ítem** del total para evitar que se correlacione consigo mismo.
+:::
+::: {.column width="63%"}
+```{r tabla-confiabilidad}
+tabla_alfa_drop |>
+  tabla_pgip(size = 21, padding = 9) |>
+  cols_label(Item = "Ítem eliminado", Correlacion_Item_Total = "Corr. ítem-total", Alfa_sin_item = "α sin el ítem") |>
+  cols_align(align = "center", columns = c(Correlacion_Item_Total, Alfa_sin_item))
+```
+
+:::
+::::
+
+::: {.fragment .fade-up}
+Las correlaciones ítem-resto se ubican entre `r format(min(tabla_alfa_drop$Correlacion_Item_Total), nsmall = 2)` y `r format(max(tabla_alfa_drop$Correlacion_Item_Total), nsmall = 2)`, muy por sobre el mínimo de 0,30 exigido para conservar un ítem (Nunnally y Bernstein, 1994). El mayor $\alpha$ sin el ítem es `r format(max(tabla_alfa_drop$Alfa_sin_item), nsmall = 3)`, frente al $\alpha$ global de `r alfa_general`: **ningún ítem conviene eliminarse** — cada uno aporta varianza verdadera al constructo.
+:::
+
+## <span class="section-kicker">04 · Análisis Factorial Confirmatorio · Evidencias de validez</span>Cuadro 3 · Cargas factoriales estandarizadas {.smaller}
+
+<span class="tag-instrumento tag-afc">AFC · Validez estructural</span>
+
+El **Análisis Factorial Confirmatorio** verifica si las 6 variables convergen en un único factor latente, evaluando cargas e índices de ajuste — la evidencia de **estructura interna** que exigen los Estándares AERA, APA y NCME (2014). Modelo de un solo factor, estimador **WLSMV** (correlaciones policóricas, robusto ante la asimetría de ítems ordinales).
+
+```{r afc}
+modelo_pgip <- '
+  PGIP =~ capod_p11_01 + capod_p11_02 + capod_p11_03 + capod_p11_04 + capod_p11_05 + capod_p11_06
+'
+ajuste_afc <- cfa(modelo_pgip, data = df_limpio, ordered = items_pgip, estimator = "WLSMV")
+ajuste_indices <- fitmeasures(ajuste_afc, c("cfi.scaled", "tli.scaled", "rmsea.scaled", "srmr"))
+
+cargas <- standardizedSolution(ajuste_afc) |>
+  filter(op == "=~") |>
+  select(Item = rhs, Carga_Factorial = est.std) |>
+  mutate(
+    Item = c("01 · Proactiva", "02 · Procedimental", "03 · Formativa",
+             "04 · Colaborativa", "05 · Seguridad Física", "06 · Normativo-Ética"),
+    Carga_Factorial = round(Carga_Factorial, 3)
+  )
+
+cargas |>
+  tabla_pgip(size = 20, padding = 7) |>
+  cols_label(Item = "Ítem", Carga_Factorial = "Carga factorial (λ)") |>
+  data_color(columns = Carga_Factorial, palette = c(azul_tinta, azul_institucional), domain = c(0.5, 1)) |>
+  fmt_number(columns = Carga_Factorial, decimals = 3)
+```
+
+::: {.fragment .fade-up}
+Ninguna carga factorial fue inferior a 0,60: el ítem es un excelente representante del constructo
+<br>(Hair et al., 1998; Brown, 2015).
+:::
+
+## Resultados · Ajuste global del modelo
+
+<span class="tag-instrumento tag-afc">AFC · Índices de ajuste</span>
+
+```{r tabla-ajuste-afc}
+umbrales <- tibble(
+  Indice = c("CFI", "TLI", "SRMR", "RMSEA"),
+  Valor = round(c(ajuste_indices["cfi.scaled"], ajuste_indices["tli.scaled"],
+                   ajuste_indices["srmr"], ajuste_indices["rmsea.scaled"]), 3),
+  Criterio = c("> 0.95 (Excelente)", "> 0.90 (Aceptable)", "< 0.08 (Bueno)", "< 0.06 (Óptimo)"),
+  Cumple = c(ajuste_indices["cfi.scaled"] > 0.95, ajuste_indices["tli.scaled"] > 0.90,
+             ajuste_indices["srmr"] < 0.08, ajuste_indices["rmsea.scaled"] < 0.06),
+  Nota = c("Ajuste óptimo del modelo latente.", "Respalda la covariación unidimensional.",
+           "Residuos de covarianza mínimos.", "Inflación espuria en tests breves (Kenny, 2015).")
+)
+
+umbrales |>
+  select(-Cumple) |>
+  tabla_pgip(size = 22, padding = 10) |>
+  cols_label(Indice = "Índice", Valor = "Valor obtenido", Criterio = "Criterio de corte", Nota = "Estado") |>
+  cols_align(align = "center", columns = Valor) |>
+  tab_style(
+    style = cell_text(color = azul_institucional, weight = "700"),
+    locations = cells_body(columns = Valor, rows = umbrales$Cumple)
+  ) |>
+  tab_source_note(html("Criterios de corte convencionales (Hu y Bentler, 1999)."))
+```
+
+::: {.fragment .fade-up}
+A pesar de la distorsión matemática documentada del RMSEA en modelos de bajos grados de libertad (Kenny, Kaniskan y McCoach, 2015), la convergencia robusta de **CFI**, **TLI** y **SRMR** confirma la validez de constructo unidimensional del PGIP.
+:::
+
+## <span class="section-kicker">05 · Invarianza · Control por variables sociodemográficas</span>Tabla 3 · Por Grupo Socioeconómico y Dependencia {.smaller}
+
+<span class="tag-instrumento tag-tct">TCT</span> <span class="tag-instrumento tag-afc">AFC</span> · Como aproximación a la **invarianza de medida**: Alfa (&gt;0,80) y ajuste CFI/TLI (&gt;0,95) · SRMR (&lt;0,08) 
+<br>entre subgrupos.
+
+```{r propiedades-grupos}
+mod_pgip <- 'PGIP =~ capod_p11_01 + capod_p11_02 + capod_p11_03 + capod_p11_04 + capod_p11_05 + capod_p11_06'
+
+calc_media <- function(df) round(mean(rowMeans(df |> select(all_of(items_pgip)), na.rm = TRUE), na.rm = TRUE), 2)
+calc_alfa  <- function(df) round(alpha(df |> select(all_of(items_pgip)), warnings = FALSE)$total$raw_alpha, 3)
+calc_fit <- function(df) {
+  datos <- df |> select(all_of(items_pgip))
+  if (nrow(datos) < 50) return(tibble(CFI = NA, TLI = NA, SRMR = NA))
+  tryCatch({
+    fit <- cfa(mod_pgip, data = datos, ordered = items_pgip, estimator = "WLSMV")
+    tibble(CFI = round(fitmeasures(fit, "cfi.scaled"), 3), TLI = round(fitmeasures(fit, "tli.scaled"), 3),
+           SRMR = round(fitmeasures(fit, "srmr"), 3))
+  }, error = function(e) tibble(CFI = NA, SRMR = NA))
+}
+
+t_gse <- df_final |> filter(GSE != "Sin información") |> group_by(GSE) |>
+  summarise(N = n(), Media = calc_media(cur_data()), Alfa = calc_alfa(cur_data()), calc_fit(cur_data())) |>
+  mutate(Var = "1. Grupo Socioeconómico") |> rename(Categoria = GSE)
+t_da <- df_final |> filter(DA != "Sin información") |> group_by(DA) |>
+  summarise(N = n(), Media = calc_media(cur_data()), Alfa = calc_alfa(cur_data()), calc_fit(cur_data())) |>
+  mutate(Var = "2. Dependencia Administrativa") |> rename(Categoria = DA)
+t_rur <- df_final |> filter(Ruralidad != "Sin información") |> group_by(Ruralidad) |>
+  summarise(N = n(), Media = calc_media(cur_data()), Alfa = calc_alfa(cur_data()), calc_fit(cur_data())) |>
+  mutate(Var = "3. Zona Geográfica") |> rename(Categoria = Ruralidad)
+t_ori <- df_final |> filter(Orientacion != "Sin información") |> group_by(Orientacion) |>
+  summarise(N = n(), Media = calc_media(cur_data()), Alfa = calc_alfa(cur_data()), calc_fit(cur_data())) |>
+  mutate(Var = "4. Orientación") |> rename(Categoria = Orientacion)
+
+tabla_control_izq <- bind_rows(t_gse, t_da) |> select(Var, Categoria, N, Media, Alfa, CFI, TLI, SRMR)
+tabla_control_der <- bind_rows(t_rur, t_ori) |> select(Var, Categoria, N, Media, Alfa, CFI, TLI, SRMR)
+
+tabla_control_izq |>
+  tabla_pgip(groupname_col = "Var", size = 18, padding = 5) |>
+  tab_spanner(label = "TCT", columns = c(Media, Alfa)) |>
+  tab_spanner(label = "AFC", columns = c(CFI, TLI, SRMR)) |>
+  cols_align(align = "center", columns = c(N, Media, Alfa, CFI, TLI, SRMR))
+```
+
+## Tabla 3 · Por Zona Geográfica y Orientación {.smaller}
+
+```{r tabla-control-der}
+tabla_control_der |>
+  tabla_pgip(groupname_col = "Var", size = 24, padding = 10) |>
+  tab_spanner(label = "TCT", columns = c(Media, Alfa)) |>
+  tab_spanner(label = "AFC", columns = c(CFI, TLI, SRMR)) |>
+  cols_align(align = "center", columns = c(N, Media, Alfa, CFI, TLI, SRMR))
+```
+
+::: {.fragment .fade-up}
+<div class="nota-fuente" style="font-size:0.85em; font-style:normal; margin-top:0.6em;">
+<strong style="color:#052C4D;">Lectura:</strong> el PGIP es confiable y estructuralmente válido en <strong>todos</strong> los estratos ($\alpha > 0.85$ · CFI &gt; 0,98 · TLI &gt; 0,97)
+<br>Se descarta un Funcionamiento Diferencial del Ítem (DIF) estructural severo. <br><em>La estructura interna, sin embargo, no agota la validez: <strong style="color:#052C4D;">a continuación</strong> aportamos la evidencia basada en la <strong style="color:#052C4D;">relación con otras variables</strong>, la cuarta fuente de los Estándares.</em>
+</div>
+:::
+
+```{r validez-datos}
+#| include: false
+#| cache: true
+items_prev <- sprintf("capod_p12_%02d", 1:7)    # convergente
+items_vict <- sprintf("capod_p13_%02d", 1:10)   # divergente
+
+df_validez <- bd_apoderados |>
+  mutate(across(all_of(c(items_pgip, items_prev, items_vict)),
+                ~ ifelse(.x %in% c(0, 99), NA, .x))) |>
+  filter(complete.cases(pick(all_of(c(items_pgip, items_prev, items_vict))))) |>
+  mutate(
+    PGIP_s = rowMeans(pick(all_of(items_pgip))),
+    PREV_s = rowMeans(pick(all_of(items_prev))),
+    VICT_s = rowMeans(pick(all_of(items_vict)))
+  )
+n_validez <- nrow(df_validez)
+
+# Fiabilidades (alfa de Cronbach) sobre exactamente la misma submuestra
+a_pgip <- alpha(df_validez |> select(all_of(items_pgip)), warnings = FALSE)$total$raw_alpha
+a_prev <- alpha(df_validez |> select(all_of(items_prev)), warnings = FALSE)$total$raw_alpha
+a_vict <- alpha(df_validez |> select(all_of(items_vict)), warnings = FALSE)$total$raw_alpha
+
+# Correlaciones observadas entre puntajes compuestos
+r_conv <- cor(df_validez$PGIP_s, df_validez$PREV_s)   # convergente (se espera +)
+r_div  <- cor(df_validez$PGIP_s, df_validez$VICT_s)   # divergente  (se espera −)
+
+# Corrección por atenuación (Spearman, 1904):  r_t = r / sqrt(rXX' * rYY')
+r_conv_corr <- r_conv / sqrt(a_pgip * a_prev)
+r_div_corr  <- r_div  / sqrt(a_pgip * a_vict)
+
+# Matriz de correlaciones ítem a ítem (para el mapa de calor)
+orden     <- c(items_pgip, items_prev, items_vict)
+etiquetas <- c(paste0("G", 1:6), paste0("A", 1:7), paste0("V", 1:10))
+mat_all   <- cor(df_validez |> select(all_of(orden)), use = "pairwise.complete.obs")
+dimnames(mat_all) <- list(etiquetas, etiquetas)
+```
+
+## <span class="section-kicker">06 · Validez · Relación con otras variables</span>Convergencia y divergencia {.smaller}
+
+:::: {.columns}
+::: {.column width="50%"}
+::: {.theory-card style="border-left-color:#0B4C82; padding:0.4em 0.75em; font-size:0.56em; margin-bottom:0.3em; min-height: 85px;"}
+<span class="concepto">Convergente · p12 · acciones antiviolencia</span>
+Mismo constructo por otra vía (misma raíz) → se espera correlación **positiva y fuerte** <br>(Campbell y Fiske, 1959).
+:::
+:::
+
+::: {.column width="50%"}
+::: {.theory-card style="border-left-color:#A9782E; padding:0.4em 0.75em; font-size:0.56em; margin-bottom:0.3em; min-height: 85px;"}
+<span class="concepto" style="color:#8A5F1E;">Divergente · p13 · victimización del hijo(a)</span>
+Constructo distinto (otra raíz) → se espera **negativa**. Es, además, la prueba del efecto halo.
+:::
+:::
+::::
+
+::: {.figura-matriz}
+```{r validez-heatmap}
+#| fig.width: 12
+#| fig.height: 9
+df_hm <- as.data.frame(as.table(mat_all)) |>
+  setNames(c("Fila", "Col", "r")) |>
+  mutate(Fila    = factor(Fila, levels = etiquetas),
+         Col     = factor(Col,  levels = rev(etiquetas)),
+         etq     = ifelse(abs(r) > 0.999, "1",
+                          sub("^(-?)0[.]", "\\1.", sprintf("%.2f", r))),
+         col_txt = ifelse(abs(r) > 0.60, "#FFFFFF", "#1C2733"))
+
+col_blk <- c(rep("#0B4C82", 6), rep("#1F7A5A", 7), rep("#A9782E", 10))  # G · A · V
+
+ggplot(df_hm, aes(Fila, Col, fill = r)) +
+  geom_tile(color = hueso, linewidth = 0.3) +
+  geom_text(aes(label = etq, color = col_txt), size = 4) +
+  scale_color_identity() +
+  geom_hline(yintercept = c(10.5, 17.5), color = "#052C4D", linewidth = 1.15) +
+  geom_vline(xintercept = c(6.5, 13.5),  color = "#052C4D", linewidth = 1.15) +
+  scale_fill_gradient2(low = oro, mid = panel_bg, high = azul_institucional,
+                       midpoint = 0, limits = c(-1, 1),
+                       breaks = c(-1, -0.5, 0, 0.5, 1), name = "Correlación de Pearson") +
+  # Forzamos que la barra física del gradiente sea más alta y ancha
+  guides(fill = guide_colorbar(barheight = unit(7, "cm"), 
+                               barwidth = unit(0.7, "cm"),
+                               title.position = "top", # Pone el título arriba
+                               title.hjust = 0.5)) +   # Centra el título
+  coord_fixed(expand = FALSE, clip = "off") +
+  labs(x = NULL, y = NULL) +
+  tema_pgip(base_size = 15) +
+  theme(panel.grid        = element_blank(),
+        axis.text.x       = element_text(size = rel(0.9), face = "bold", color = col_blk),
+        axis.text.y       = element_text(size = rel(0.9), face = "bold", color = rev(col_blk)),
+        legend.position    = "right",
+        # Agrandamos el título de la leyenda y lo hacemos negrita
+        legend.title       = element_text(color = tinta, size = rel(1.1), face = "bold"),
+        # Agrandamos los números de la leyenda (-1, -0.5, 0, etc.)
+        legend.text        = element_text(size = rel(1.0), face = "bold"),
+        plot.margin        = margin(t = 25, r = 10, b = 10, l = 35))
+```
+:::
+
+<div class="nota-fuente" style="font-size:0.48em; font-style:normal; margin-top:0.05em; text-align:center;">
+<strong style="color:#0B4C82;">G</strong> Gestión (PGIP) · <strong style="color:#1F7A5A;">A</strong> Antiviolencia · <strong style="color:#A9782E;">V</strong> Victimización — <span style="color:#0B4C82;font-weight:700;">bloques azules</span> convergen, <span style="color:#8A5F1E;font-weight:700;">bloques oro</span> divergen (matriz multi-rasgo; Campbell y Fiske, 1959).
+</div>
+
+## Corrección por atenuación {.smaller}
+
+<span class="tag-instrumento tag-afc">Validez · Relación con otras variables</span>
+
+Toda medición conlleva error, y el error **atenúa** cada correlación observada. La corrección estima la relación entre los **valores verdaderos** (Spearman, 1904):
+
+$$\rho_{t_X t_Y} = \frac{\rho_{XY}}{\sqrt{\rho_{XX'}}\,\sqrt{\rho_{YY'}}} \qquad\text{con el techo}\qquad \rho_{XY} \le \sqrt{\rho_{XX'}}\,\sqrt{\rho_{YY'}}$$
+
+```{r validez-atenuacion}
+tabla_aten <- tibble(
+  Relacion = c("Convergente", "Divergente"),
+  Criterio = c("Acciones antiviolencia · p12 (7 ítems)",
+               "Victimización del hijo(a) · p13 (10 ítems)"),
+  Esperado = c("Positiva y fuerte", "Negativa, sin acoplarse"),
+  r_obs  = c(r_conv, r_div),
+  rel    = c(a_prev, a_vict),
+  r_corr = c(r_conv_corr, r_div_corr)
+)
+
+tabla_aten |>
+  tabla_pgip(size = 19, padding = 10) |>
+  cols_label(Relacion = "Evidencia", Criterio = "Escala criterio (mismo cuestionario)",
+             Esperado = "Predicción teórica", r_obs = "r observada",
+             rel = "ρ criterio", r_corr = "r desatenuada") |>
+  fmt_number(columns = c(r_obs, rel, r_corr), decimals = 3) |>
+  cols_align(align = "center", columns = c(r_obs, rel, r_corr)) |>
+  tab_style(style = cell_text(weight = "700", color = azul_institucional),
+            locations = cells_body(columns = r_corr)) |>
+  tab_source_note(html(paste0(
+    "Fiabilidad del PGIP en esta submuestra: &rho;<sub>XX'</sub> = ",
+    sprintf("%.3f", a_pgip), " &middot; N = ", format(n_validez, big.mark = "."),
+    ". La divergencia se corrige con la fiabilidad de su propia escala criterio.")))
+```
+
+::: {.fragment .fade-up}
+<div class="nota-fuente" style="font-size:0.8em; font-style:normal; margin-top:0.4em;">
+<strong style="color:#052C4D;">Lectura:</strong> desatenuada, la <strong>convergencia</strong> es alta — el PGIP y la prevención antiviolencia miden esencialmente el mismo rasgo latente (el constructo <em>tiene entidad, no es espurio</em>). La <strong>divergencia</strong> es negativa pero se mantiene <strong>muy por debajo del techo de −1</strong>: los dos constructos verdaderos son distintos.
+</div>
+:::
+
+::: {.fragment .fade-up}
+<div class="nota-fuente" style="font-size:0.8em; font-style:normal; margin-top:0.3em;">
+<strong style="color:#052C4D;">El efecto halo, acotado:</strong> un halo global habría acoplado gestión y victimización casi hasta el techo; que la divergencia real quede lejos de −1 muestra que el apoderado <strong>distingue</strong> «gestiona» de «lo molestan». En la revisión de sesgos, el halo pasa de <em>no identificable</em> a <strong>acotado.</strong>
+</div>
+:::
+
+## <span class="section-kicker">07 · Del ítem al puntaje · Puntuación del constructo y resultados</span>Justificación psicométrica: modelo lineal de la TCT
+
+<span class="tag-instrumento tag-tct">TCT · Puntuación</span>
+
+La estimación del puntaje latente se fundamenta en el **Modelo Lineal de la TCT** (Crocker & Algina, 2008):
+
+$$X = T + E \qquad\qquad X_{\text{total}} = \sum_{i=1}^{6} X_i = \sum_{i=1}^{6} T_i + \sum_{i=1}^{6} E_i$$
+
+::: {.incremental}
+- **τ-equivalencia esencial:** el AFC mostró cargas factoriales intensas y homogéneas
+<br>($\lambda$ entre 0,78 y 0,85) — los ítems miden el constructo con unidades métricas equivalentes.
+- **Mitigación del error aleatorio:** al sumar linealmente los ítems, las varianzas de error se cancelan por agregación, maximizando la varianza verdadera del constructo global.
+:::
+
+## Tabla 4 · Métrica escalar y distribución del PGIP (0–100) {.smaller}
+
+<span class="tag-instrumento tag-tct">TCT · Transformación</span>
+
+```{r calcular-puntaje}
+#| include: false
+df_final <- df_final |>
+  mutate(PGIP_Bruto = rowSums(pick(all_of(items_pgip)), na.rm = FALSE)) |>
+  mutate(PGIP_100 = ((PGIP_Bruto - 6) / (24 - 6)) * 100)
+
+resumen_pgip <- data.frame(
+  Metrica = c("Bruto (6–24)", "Estandarizado (0–100)"),
+  Media = c(mean(df_final$PGIP_Bruto), mean(df_final$PGIP_100)),
+  Desviacion = c(sd(df_final$PGIP_Bruto), sd(df_final$PGIP_100)),
+  Minimo = c(min(df_final$PGIP_Bruto), min(df_final$PGIP_100)),
+  Maximo = c(max(df_final$PGIP_Bruto), max(df_final$PGIP_100))
+)
+```
+
+:::: {.columns}
+::: {.column width="44%"}
+$$PGIP_{100} = \left( \frac{X_{\text{bruto}} - 6}{24 - 6} \right) \times 100$$
+
+```{r tabla-metrica-pgip}
+resumen_pgip |>
+  tabla_pgip(size = 16, padding = 8) |>
+  cols_label(Metrica = "PGIP", Media = "Media", Desviacion = "DE",
+             Minimo = "Mín.", Maximo = "Máx.") |>
+  fmt_number(columns = c(Media, Desviacion, Minimo, Maximo), decimals = 2) |>
+  cols_align(align = "center", columns = c(Media, Desviacion, Minimo, Maximo))
+```
+
+::: {.fragment .fade-up}
+<div class="nota-fuente" style="font-size:0.85em; font-style:normal; margin-top:0.6em;">
+<strong style="color:#052C4D;">Lectura:</strong> la transformación es <strong>lineal y continua</strong>: cambia la regla del instrumento, no la forma de la distribución. La asimetría de los ítems reaparece a escala: masa en la parte alta, cola hacia los puntajes bajos.
+</div>
+:::
+:::
+
+::: {.column width="54%"}
+```{r grafico-distribucion-pgip}
+#| fig.width: 6.6
+#| fig.height: 5.0
+media_pgip <- mean(df_final$PGIP_100)
+de_pgip    <- sd(df_final$PGIP_100)
+
+ggplot(df_final, aes(x = PGIP_100)) +
+  geom_histogram(
+    aes(y = after_stat(count / sum(count))),
+    binwidth = 100 / 18, center = 0,
+    fill = azul_institucional, color = hueso, linewidth = 0.4
+  ) +
+  geom_vline(xintercept = media_pgip, color = oro, linewidth = 0.9, linetype = "42") +
+  annotate(
+    "text", x = media_pgip - 2.5, y = Inf, hjust = 1, vjust = 1.4,
+    label = paste0("Media = ", format(round(media_pgip, 1), decimal.mark = ","),
+                   "\nDE = ",  format(round(de_pgip, 1),  decimal.mark = ",")),
+    family = "Montserrat", fontface = "bold", color = oro, size = 5, lineheight = 1.05
+  ) +
+  scale_x_continuous(breaks = seq(0, 100, by = 25)) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  labs(x = "Puntuación PGIP (0–100)", y = "% de apoderados") +
+  tema_pgip(base_size = 15)
+```
+:::
+::::
+
+## Tabla 5 · Puntuaciones e incertidumbre {.smaller}
+
+<span class="tag-instrumento tag-metodo">Reporte · IC 95%</span>
+
+```{r resultados-incertidumbre}
+calcular_descriptivos_ic <- function(df) {
+  df |>
+    summarise(N = n(), Media = round(mean(PGIP_100, na.rm = TRUE), 2),
+              DE = round(sd(PGIP_100, na.rm = TRUE), 2),
+              Error_Est = sd(PGIP_100, na.rm = TRUE) / sqrt(n()), .groups = "drop") |>
+    mutate(IC_Inferior = round(Media - (1.96 * Error_Est), 2),
+           IC_Superior = round(Media + (1.96 * Error_Est), 2),
+           `IC 95%` = paste0("[", format(IC_Inferior, nsmall = 2), " ; ", format(IC_Superior, nsmall = 2), "]")) |>
+    select(-Error_Est, -IC_Inferior, -IC_Superior)
+}
+
+res_gse <- df_final |> filter(GSE != "Sin información") |> group_by(GSE) |>
+  calcular_descriptivos_ic() |> mutate(Var = "1. Grupo Socioeconómico") |> rename(Categoria = GSE)
+res_da <- df_final |> filter(DA != "Sin información") |> group_by(DA) |>
+  calcular_descriptivos_ic() |> mutate(Var = "2. Dependencia Administrativa") |> rename(Categoria = DA)
+res_rur <- df_final |> filter(Ruralidad != "Sin información") |> group_by(Ruralidad) |>
+  calcular_descriptivos_ic() |> mutate(Var = "3. Zona Geográfica") |> rename(Categoria = Ruralidad)
+res_ori <- df_final |> filter(Orientacion != "Sin información") |> group_by(Orientacion) |>
+  calcular_descriptivos_ic() |> mutate(Var = "4. Orientación") |> rename(Categoria = Orientacion)
+
+resultados_izq <- bind_rows(res_gse, res_da) |> select(Var, Categoria, N, Media, DE, `IC 95%`)
+resultados_der <- bind_rows(res_rur, res_ori) |> select(Var, Categoria, N, Media, DE, `IC 95%`)
+```
+
+:::: {.columns}
+::: {.column width="48%"}
+```{r tabla-resultados-izq}
+resultados_izq |>
+  tabla_pgip(groupname_col = "Var", size = 16, padding = 6) |>
+  cols_align(align = "center", columns = c(N, Media, DE, `IC 95%`))
+```
+:::
+::: {.column width="48%"}
+```{r tabla-resultados-der}
+resultados_der |>
+  tabla_pgip(groupname_col = "Var", size = 16, padding = 6) |>
+  cols_align(align = "center", columns = c(N, Media, DE, `IC 95%`))
+```
+:::
+::::
+
+## Visualización de brechas por variables de control {.smaller background-color="#FAF7F1"}
+
+<span class="tag-instrumento tag-metodo">El gráfico protagonista</span>
+
+::: {.figura-xl}
+```{r grafico-brechas}
+#| fig.width: 11
+#| fig.height: 5.2
+df_grafico <- df_final |>
+  select(PGIP_100, GSE, DA, Ruralidad, Orientacion) |>
+  pivot_longer(cols = c(GSE, DA, Ruralidad, Orientacion), names_to = "Variable_Control", values_to = "Categoria") |>
+  filter(Categoria != "Sin información") |>
+  mutate(
+    Variable_Control = factor(Variable_Control, levels = c("GSE", "DA", "Ruralidad", "Orientacion"),
+      labels = c("1. Grupo Socioeconómico", "2. Dependencia Administrativa", "3. Zona Geográfica", "4. Orientación Religiosa")),
+    Categoria = factor(Categoria, levels = c("Bajo", "Medio Bajo", "Medio", "Medio Alto", "Alto",
+      "Municipal", "SLE", "Particular subvencionado", "Particular pagado", "Urbano", "Rural",
+      "Laico", "Confesional/Religioso")),
+    # Destacar el hallazgo contraintuitivo: Medio Alto obtiene el puntaje MÁS BAJO del GSE
+    destacar = Variable_Control == "1. Grupo Socioeconómico" & Categoria == "Medio Alto"
+  )
+
+ggplot(df_grafico, aes(x = Categoria, y = PGIP_100, fill = destacar)) +
+  geom_boxplot(outlier.shape = NA, linewidth = 0.35, color = azul_profundo, alpha = 0.95) +
+  facet_wrap(~Variable_Control, scales = "free_x", ncol = 2) +
+  scale_fill_manual(values = c("FALSE" = "#8FB0CC", "TRUE" = oro), guide = "none") +
+  labs(y = "Puntuación PGIP (0–100)", x = NULL) +
+  tema_pgip(base_size = 14, angulo_x = 22)
+```
+:::
+
+## Tabla 6 · Contraste de la hipótesis de brechas {.smaller}
+
+<span class="tag-instrumento tag-metodo">Inferencia · Significancia y tamaño del efecto</span>
+
+Cierre inferencial de la **hipótesis descriptiva**: se contrasta el $PGIP_{100}$ medio entre los grupos de cada variable de control con la familia **Welch** — prueba *t* (2 grupos) y ANOVA (más de 2) — robusta a varianzas desiguales y opción por defecto de R; con $N = 171.797$, el TCL respalda la inferencia pese a la asimetría de la escala.
+
+```{r pruebas-brechas}
+contraste_brechas <- function(datos, variable, etiqueta) {
+  d <- datos |>
+    filter(.data[[variable]] != "Sin información") |>
+    transmute(PGIP_100, Grupo = factor(.data[[variable]]))
+  ns     <- tapply(d$PGIP_100, d$Grupo, length)
+  medias <- tapply(d$PGIP_100, d$Grupo, mean)
+  vars   <- tapply(d$PGIP_100, d$Grupo, var)
+  if (nlevels(d$Grupo) == 2) {
+    pr <- t.test(PGIP_100 ~ Grupo, data = d)      # t de Welch: opción por defecto de R
+    ef <- abs(diff(medias)) / sqrt(weighted.mean(vars, ns - 1))  # d de Cohen (DE agrupada)
+    tibble(
+      Variable = etiqueta, Contraste = "t de Welch",
+      Estadistico = sprintf("t(%.0f) = %.2f", pr$parameter, abs(pr$statistic)),
+      p = ifelse(pr$p.value < 0.001, "< 0.001", sprintf("= %.3f", pr$p.value)),
+      Efecto = sprintf("d = %.2f", ef),
+      Magnitud = as.character(cut(ef, c(-Inf, 0.20, 0.50, 0.80, Inf),
+                                  c("Trivial", "Pequeño", "Moderado", "Grande"), right = FALSE))
+    )
+  } else {
+    pr <- oneway.test(PGIP_100 ~ Grupo, data = d) # ANOVA de Welch: opción por defecto de R
+    ss <- summary(aov(PGIP_100 ~ Grupo, data = d))[[1]][["Sum Sq"]]
+    ef <- ss[1] / sum(ss)                          # eta cuadrado
+    tibble(
+      Variable = etiqueta, Contraste = "ANOVA de Welch",
+      Estadistico = sprintf("F(%.0f; %.0f) = %.1f", pr$parameter[1], pr$parameter[2], pr$statistic),
+      p = ifelse(pr$p.value < 0.001, "< 0.001", sprintf("= %.3f", pr$p.value)),
+      Efecto = sprintf("η² = %.3f", ef),
+      Magnitud = as.character(cut(ef, c(-Inf, 0.01, 0.06, 0.14, Inf),
+                                  c("Trivial", "Pequeño", "Moderado", "Grande"), right = FALSE))
+    )
+  }
+}
+
+tabla_brechas <- bind_rows(
+  contraste_brechas(df_final, "GSE",         "1. Grupo Socioeconómico"),
+  contraste_brechas(df_final, "DA",          "2. Dependencia Administrativa"),
+  contraste_brechas(df_final, "Ruralidad",   "3. Zona Geográfica"),
+  contraste_brechas(df_final, "Orientacion", "4. Orientación Religiosa")
+)
+
+tabla_brechas |>
+  tabla_pgip(size = 20, padding = 9) |>
+  cols_label(Variable = "Variable de control", Contraste = "Contraste", Estadistico = "Estadístico",
+             p = "Valor p", Efecto = "Tamaño del efecto", Magnitud = "Magnitud") |>
+  cols_align(align = "center", columns = c(Estadistico, p, Efecto, Magnitud)) |>
+  tab_style(style = cell_text(weight = "700", color = azul_institucional),
+            locations = cells_body(columns = Magnitud)) |>
+  tab_source_note(html("Umbrales de Cohen (1988): efecto pequeño desde d = 0,20 · η² = 0,01. Con dos grupos se reporta d; con más grupos se reporta η² <br>(proporción de la varianza del PGIP explicada por la variable)."))
+```
+
+::: {.fragment .fade-up}
+<div class="nota-fuente" style="font-size:0.85em; font-style:normal; margin-top:0.6em;">
+<strong style="color:#052C4D;">Lectura:</strong> las cuatro pruebas resultan <strong>significativas</strong> (p &lt; 0,05): con esta potencia, hasta la brecha rural–urbana de 0,8 puntos rechaza H<sub>0</sub>. Pero <strong>ningún efecto alcanza siquiera el umbral «pequeño» de Cohen</strong> — la mayor brecha (GSE) explica apenas un 0,5% de la varianza. <br><em>La hipótesis se confirma en lo formal y se matiza en lo sustantivo: significancia estadística no es relevancia práctica.</em>
+</div>
+:::
+
+## <span class="section-kicker">08 · Cierre · Conclusiones</span>Conclusiones psicométricas
+
+Los resultados son consistentes con la **Hipótesis Psicométrica** planteada al inicio del estudio:
+
+::: {.incremental}
+- **Validez de constructo unidimensional:** el AFC demostró que los 6 indicadores convergen sólidamente en un único factor latente, justificando el uso de la métrica $PGIP_{100}$.
+- **Confiabilidad e invarianza robusta:** consistencia interna global excelente
+<br>($\alpha \approx 0.88$); el test es equitativo para las 4 variables de control.
+- **Refutación de sesgo por capital cultural:** el modelo no presentó caídas de ajuste en estratos Particulares Pagados o GSE Alto. Se descarta un DIF estructural.
+- **Relación con otras variables:** el PGIP **converge** con la prevención antiviolencia y **diverge** de la victimización sin acoplarse — evidencia que **acota el efecto halo**.
+:::
+
+## Conclusiones de brechas
+
+::: {.incremental}
+- **La hipótesis de brechas se confirma solo en lo formal:** las cuatro pruebas de la Tabla 6 son significativas (p < 0,05), pero ningún tamaño de efecto alcanza el umbral «pequeño» de Cohen — las variables de control explican menos del 0,5% de la varianza del PGIP.
+- **Brechas estructurales (GSE y Dependencia):** patrón no lineal — el grupo **Medio Alto** obtiene el puntaje más bajo de todos (68,0), por debajo incluso del GSE Bajo (72,2). Consistente con el sesgo de referencia: mayor capital cultural, estándares más exigentes.
+- **El colegio como mesosistema protector:** la percepción es transversal a vulnerabilidad, territorio, religión y dependencia — en la práctica, las familias del país describen una misma gestión preventiva.
+:::
+
+## Alcance y límites · Los once sesgos, revisados {.smaller}
+
+Ningún diseño elimina los once sesgos declarados en el método. Con la evidencia ya presentada, cada uno queda **descartado por los datos**, **controlado en el preprocesamiento**, **acotado** por evidencia parcial, o **no identificable** con seis ítems de polaridad única y un solo informante.
+
+```{r tratamiento-sesgos}
+sesgos_manejo <- data.frame(
+  Familia = c(rep("Dimensión de respuesta", 6),
+              rep("Información y muestreo", 3),
+              rep("Procesamiento técnico", 2)),
+  Sesgo = c("1 · Deseabilidad social", "2 · Referencia", "3 · Aquiescencia",
+            "4 · Efecto halo", "5 · Tendencia central", "6 · Método común",
+            "7 · Observación indirecta", "8 · Autoselección", "9 · DIF",
+            "10 · Errores de captura", "11 · Efecto de techo"),
+  Evidencia = c(
+    "Tabla 5 y boxplots: el GSE Medio Alto puntúa más bajo, no más alto",
+    "Tabla 3: el ajuste se sostiene en los cuatro controles",
+    "Exigiría un ítem de polaridad invertida; los seis son positivos",
+    "Validez discriminante: la divergencia con la victimización, ya desatenuada, queda lejos de −1",
+    "Visualización de asimetría: la moda es la categoría extrema alta",
+    "El AFC unifactorial es compatible con sesgo y con constructo real",
+    "Cuadro 3: el ítem 02 no pierde carga frente al 05, más directo",
+    "Cuadro 2: tasa de omisión por ítem (falta desagregar por GSE)",
+    "Tabla 3: ajuste por estrato (falta invarianza anidada, ΔCFI)",
+    "Preprocesamiento: 0 y 99 recodificados a valor perdido",
+    "Cuadro 2 (asimetría negativa) y Tabla 5 (IC estrechos)"
+  ),
+  Estado = c("Acotado", "Acotado", "No identificable", "Acotado",
+             "Descartado", "No identificable", "Acotado", "Acotado",
+             "Acotado", "Controlado", "Confirmado")
+) |>
+  mutate(Familia = factor(Familia, levels = c("Dimensión de respuesta",
+                                              "Información y muestreo",
+                                              "Procesamiento técnico")))
+
+sesgos_manejo |>
+  tabla_pgip(groupname_col = "Familia", size = 17, padding = 4) |>
+  cols_label(Sesgo = "Sesgo", Evidencia = "Dónde se examina en el estudio", Estado = "Estado") |>
+  cols_align(align = "center", columns = Estado) |>
+  tab_style(style = cell_text(weight = "700", color = azul_institucional),
+            locations = cells_body(columns = Sesgo)) |>
+  # Azul = el estudio lo resuelve; gris = evidencia parcial; oro = límite declarado
+  tab_style(style = cell_text(weight = "700", color = azul_institucional),
+            locations = cells_body(columns = Estado, rows = Estado %in% c("Descartado", "Controlado"))) |>
+  tab_style(style = cell_text(color = pizarra),
+            locations = cells_body(columns = Estado, rows = Estado == "Acotado")) |>
+  tab_style(style = cell_text(weight = "700", color = oro),
+            locations = cells_body(columns = Estado, rows = Estado %in% c("No identificable", "Confirmado")))
+```
+
+## {background-color="#0B4C82"}
+
+::: {.hook-slide}
+<p class="hook-line" style="color:#FAF7F1;">La escuela chilena logró <em style="background:none; color:#A9782E;">estandarizar</em> la gestión preventiva.</p>
+
+<p style="font-size:0.55em; color:#E7EEF5; max-width:65%; margin-top:0.9em;" class="fragment fade-up">
+El desafío ahora es que esa estandarización formal se traduzca en una resolución real y eficaz del conflicto escolar cotidiano.
+</p>
+:::

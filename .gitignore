@@ -1,0 +1,28 @@
+# ---- Datos ----
+# Las bases NO se republican: se documenta en data/README.md de dónde bajarlas.
+# DATOS.xlsx pesa 78 MB y es microdato del cuestionario de apoderados.
+data/*
+!data/README.md
+*.xlsx
+*.sav
+*.dta
+
+# ---- R y RStudio ----
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# ---- Quarto y knitr ----
+/.quarto/
+*_cache/
+*_files/
+/_site/
+
+# ---- Salidas temporales ----
+Rplots.pdf
+
+# ---- Windows ----
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
