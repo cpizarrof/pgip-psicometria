@@ -59,7 +59,6 @@ dependencia del colegio o su orientación religiosa.
 | Carpeta | Contenido |
 |---|---|
 | `presentacion/` | Código fuente en Quarto + reveal.js, la hoja de estilos y las imágenes |
-| `informe/` | El informe escrito del trabajo, en PDF |
 | `docs/` | La presentación renderizada, que es lo que publica GitHub Pages |
 | `data/` | Sólo la documentación de las fuentes: las bases no se republican |
 
