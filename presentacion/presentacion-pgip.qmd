@@ -23,6 +23,16 @@ format:
     include-in-header:
       - text: |
           <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+          <meta property="og:type" content="website">
+          <meta property="og:site_name" content="Carlos Pizarro Fuentes">
+          <meta property="og:title" content="Percepción de la Gestión Institucional Preventiva">
+          <meta property="og:description" content="Propiedades psicométricas y distribución del constructo PGIP en 171.797 apoderados, a partir del Simce 2024.">
+          <meta property="og:url" content="https://cpizarrof.github.io/pgip-psicometria/">
+          <meta property="og:image" content="https://cpizarrof.github.io/pgip-psicometria/preview.png">
+          <meta property="og:image:width" content="1200">
+          <meta property="og:image:height" content="630">
+          <meta name="twitter:card" content="summary_large_image">
+          <meta name="description" content="Propiedades psicométricas y distribución del constructo PGIP en 171.797 apoderados, a partir del Simce 2024.">
 execute:
   echo: false
   warning: false
