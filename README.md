@@ -84,4 +84,4 @@ quarto render presentacion/presentacion-pgip.qmd
 
 Bianca Bruna · Cristian Olate · Carlos Pizarro
 
-Universidad de Santiago de Chile · 2026
+Profesor: Esteban Avarca Oviedo · Universidad de Santiago de Chile · 2026
